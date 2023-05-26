@@ -1,55 +1,40 @@
-# Name of the GitHub Actions
-name: Continuous Test
- 
-# Set the actions that triggers the workflow
+name: Test-Build
 on:
-# Trigger the workflow on the push event, only in dev branch
   push:
-    branches: [ dev ]
- 
- 
+    branches:
+      - master
 jobs:
-  build:
+  test-api:
     runs-on: ubuntu-latest
- 
- 
-    strategy:
-      matrix:
-        node-version: [14.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-       
- 
     steps:
-      # Check out the repo, so the job can access it.  
-      - uses: actions/checkout@v2
- 
- 
-      # Install Node on the runner
-      - name: Use Node.js ${{ matrix.node-version }}      
-        uses: actions/setup-node@v1
-       
-      # Install newman globally, the reporter for slack and install the html extra reporter
-      - name: Install newman
-        run: |
-         npm install -g newman
-         npm install -g newman-reporter-slackreporter
-         npm install -g newman-reporter-htmlextra
- 
- 
-      # Create directory to upload test results
-      - name: Make Directory for Test Results
-        run: mkdir -p testArtifacts
- 
- 
-      # Run postman collection
-      - name: Run Postman Collection        
-        run: |
- 
-        newman  run https://api.getpostman.com/collections/{{COLLECTION_ID}}?apikey={{POSTMAN-API-KEY-HERE}} -e https://api.getpostman.com/environments/{{ENVIRONMENT_ID}}?apikey={{POSTMAN-API-KEY-HERE}} --suppress-exit-code -r slackreporter,htmlextra --reporter-htmlextra-export testArtifacts/htmlreport.html --reporter-slackreporter-webhookurl {{SLACK_WEBHOOK_URL}}
-     
-      # Upload the reports to TestArtifacts directory
-      - name: Output the results
-        uses: actions/upload-artifact@v2
-        with:
-         name: Reports
-         path: testArtifacts
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+      
+    # INstall Node on the runner
+    - name: Install Node
+      uses: actions/setup-node@v1
+      with: 
+        node-version: '12.x'
+    
+    # Install the newman command line utility and also install the html extra reporter
+    - name: Install newman
+      run: |
+       npm install -g newman
+       npm install -g newman-reporter-htmlextra
+
+    # Make directory to upload the test results
+    - name: Make Directory for results
+      run: mkdir -p testResults
+
+
+    # Run the POSTMAN collection
+    - name: Run POSTMAN collection
+      run: |
+       newman run ./tests/pokemon-api-collection.json -e ./tests/pokemonapi-env.json -r htmlextra --reporter-htmlextra-export testResults/htmlreport.html --reporter-htmlextra-darkTheme  > testResults/runreport1.html
+
+    # Upload the contents of Test Results directory to workspace
+    - name: Output the run Details
+      uses: actions/upload-artifact@v2
+      with: 
+       name: RunReports
+       path: testResults
